@@ -1,55 +1,65 @@
-import {validateIp} from './helpers'
+import {createPlacemark, getAdress, validateIp} from "./helpers";
 
 
-const ipInput = document.querySelector('.search-bar__input');
-const btn = document.querySelector('button');
-
+const  ipInput = document.querySelector('.search-bar__input');
+const btn = document.querySelector('.search-bar__btn');
 
 const ipInfo = document.querySelector('#ip');
 const locationInfo = document.querySelector('#location');
 const timezoneInfo = document.querySelector('#timezone');
 const ispInfo = document.querySelector('#isp');
 
-
 btn.addEventListener('click', getData);
 ipInput.addEventListener('keydown', handleKey);
 
-function handleKey(e) {
-    if(e.key === 'Enter'){
-        getData()
-    };
+function getData() {
+    yandexMap.geoObjects.removeAll();
+    if (validateIp(ipInput.value)) {        
+        getAdress(ipInput.value)
+            .then(setInfo)
+    }
 }
 
-function getData() {
-    if(validateIp(ipInput.value)){
-        fetch(`
-        https://geo.ipify.org/api/v2/country?apiKey=at_bOjPlhIzouZ2aoMlauaKx8PHavl7v&ipAddress=${ipInput.value}`)
-        .then(response => response.json())
-        .then(data => setInfo(data))
+function handleKey(event) {
+    if (event.key === 'Enter') {
+        getData();
     }
 }
 
 function setInfo(mapData) {
+    const {lat, lng, city, country, timezone} = mapData.location;
     ipInfo.innerText = mapData.ip;
-    locationInfo.innerText = mapData.location.country + ' ' + mapData.location.region;
-    timezoneInfo.innerText = mapData.location.timezone;
+    locationInfo.innerText = `${city}, ${country}`;
+    timezoneInfo.innerText = timezone;
     ispInfo.innerText = mapData.isp;
+
+    yandexMap.setCenter([lat, lng]);
+    createPlacemark(yandexMap, lat, lng);
+    
 }
+//A variable that contains our map
+let yandexMap;
 
-let center = [55.76, 37.64];
-
-
-function init(){
-    let Map = new ymaps.Map("map", {
-        center: center,
-        zoom: 7
+// This function creates map centered on the Kremlin or a map centered on your location (if this feature
+// is enabled in your browser)
+function createMap() {
+    let geolocation = ymaps.geolocation;
+    yandexMap = new ymaps.Map("map", {
+        center: [55.76, 37.64],
+        zoom: 10,
+        controls: []
     });
-    var myPlacemark = new ymaps.Placemark([55.8, 37.6]);
-    Map.geoObjects.add(myPlacemark);
 
+    geolocation.get({
+        provider: 'browser',
+        mapStateAutoApply: true
+    }).then(function (result) {
+        result.geoObjects.options.set('preset', 'islands#blueCircleIcon');
+        yandexMap.geoObjects.add(result.geoObjects);
+    });
 }
 
-ymaps.ready(init)
-
+// Map creation
+ymaps.ready(createMap);
 
 
